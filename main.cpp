@@ -31,25 +31,11 @@ int main() {
     std::vector<process_info> processVector;
     read_data_into_vector(processVector);
     shortest_job_first(processVector);
-    round_robin(processVector, 4);
+    round_robin(processVector, 2);
     shortest_remaining_time_first(processVector);
-
-    /*auto compare = [](int lhs, int rhs) {
-        return lhs > rhs;
-    };
-
-    std::vector<int> v{1, 5, 4};
-    std::make_heap(v.begin(), v.end(), compare);
-    for(int i = 0; i < 5; i++) {
-        std::for_each(v.begin(), v.end(),
-        [](int i){std::cout << i << " ";});
-        std::cout << std::endl;
-        std::pop_heap(v.begin(), v.end(), compare);
-    }*/
 
     return 0;
 }
-
 
 
 void read_data_into_vector(std::vector<process_info>& v) {
@@ -200,76 +186,75 @@ void round_robin(std::vector<process_info> processVector, int quantum = 4) {
 
 void shortest_remaining_time_first(std::vector<process_info> processVector) {
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),13);
-    std::cout << "SRTF Scheduling" << std::endl;
+    std::cout << "Shortest Remaining Time First"<< std::endl;
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),7);
     std::map<char, std::pair<int, int>> process_stats;
+    process_info curr_process_info{};
+    bool process_executing{false};
+    std::vector<process_info> processQueue;
+
     auto compare = [](const process_info& lhs, const process_info& rhs) {
         return lhs.burst_time > rhs.burst_time;
     };
-    bool process_executing{false};
-    std::vector<process_info> processQueue;
-    process_info current_process;
+
     int current_time{0};
     std::sort(processVector.begin(), processVector.end(),
               [](const process_info& pi1, const process_info& pi2) {
-                  return pi1.arrival_time < pi2.arrival_time;
-              });
+        return pi1.arrival_time < pi2.arrival_time;
+    });
     while(true) {
-        for(auto it = processVector.begin(); it != processVector.end(); it++) {
+        for(auto it = processVector.begin(); it != processVector.end();) {
             if(it->arrival_time == current_time) {
                 processQueue.push_back(*it);
+                std::push_heap(processQueue.begin(), processQueue.end(), compare);
                 processVector.erase(it, it + 1);
-                it--;
-            } else {
-                std::make_heap(processQueue.begin(), processQueue.end(), compare);
+            } else
                 break;
-            }
         }
         if(process_executing) {
-            std::for_each(processQueue.begin(), processQueue.end(),
-                          [](process_info& pi) {pi.wait_time++; pi.turnaround_time++;});
-            current_process.turnaround_time++;
-            current_process.burst_time--;
-            if(current_process.burst_time == 0) {
+            curr_process_info.burst_time--;
+            curr_process_info.turnaround_time++;
+            if(curr_process_info.burst_time == 0) {
                 std::cout << "\tProcess Terminated" << std::endl;
-                process_stats[current_process.processID] = std::make_pair(current_process.wait_time, current_process.turnaround_time);
+                process_stats[curr_process_info.processID] = std::make_pair(curr_process_info.wait_time, curr_process_info.turnaround_time);
                 process_executing = false;
-            }
-            if(processQueue.front().burst_time < current_process.burst_time) {
-                processQueue.push_back(current_process);
-                current_process = processQueue.front();
-                processQueue.erase(processQueue.begin());
-                std::make_heap(processQueue.begin(), processQueue.end(), compare);
+            } else if(processQueue.front().burst_time < curr_process_info.burst_time) {
+                std::cout << "\tProcess preempted by process with shorter burst time" << std::endl;
+                processQueue.push_back(curr_process_info);
+                std::push_heap(processQueue.begin(), processQueue.end(), compare);
+                process_executing = false;
             }
         }
         if(!process_executing && !processQueue.empty()) {
-            current_process = processQueue.front();
-            processQueue.erase(processQueue.begin());
-            std::make_heap(processQueue.begin(), processQueue.end(), compare);
-            std::cout << current_time << " " << current_process.processID;
+            curr_process_info = processQueue.front();
+            std::pop_heap(processQueue.begin(), processQueue.end(), compare);
+            processQueue.pop_back();
+            std::cout << current_time << " " << curr_process_info.processID;
             process_executing = true;
         }
+        std::for_each(processQueue.begin(), processQueue.end(),
+                      [](process_info& pi) {pi.wait_time++; pi.turnaround_time++;});
         if(!process_executing && processVector.empty()) {
             std::cout << current_time << "\tComplete\n" << std::endl;
             auto total_wait_time = std::accumulate(process_stats.begin(), process_stats.end(), 0,
                                                    [](int s, const std::pair<char, std::pair<int, int>> &p) {
-                                                       return s + p.second.first;
-                                                   });
+                return s + p.second.first;
+            });
             auto total_turnaround_time = std::accumulate(process_stats.begin(), process_stats.end(), 0,
                                                          [](int s, const std::pair<char, std::pair<int, int>> &p) {
-                                                             return s + p.second.second;
-                                                         });
+                return s + p.second.second;
+            });
 
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
             std::cout << std::left << std::setw(13) << "Process ID" << std::setw(18) << "Turnaround Time"
-                      << "Waiting Time" << std::endl;
+            << "Waiting Time" << std::endl;
             SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
             for (const auto &elem: process_stats) {
                 std::cout << std::left << std::setw(13) << elem.first << std::setw(18) << elem.second.second
-                          << elem.second.first << std::endl;
+                << elem.second.first << std::endl;
             }
             std::cout << std::left << std::setw(13) << "Average" << std::setw(18)
-                      << (float) total_turnaround_time / process_stats.size();
+            << (float) total_turnaround_time / process_stats.size();
             std::cout << (float) total_wait_time / process_stats.size() << std::endl << std::endl;
             break;
         }
