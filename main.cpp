@@ -5,7 +5,6 @@
 #include <fstream>
 #include <map>
 #include <numeric>
-#include <windows.h>
 #include <iomanip>
 
 struct process_info {
@@ -52,9 +51,7 @@ void read_data_into_vector(std::vector<process_info>& v) {
 
 
 void shortest_job_first(std::vector<process_info> processVector) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),11);
     std::cout << "SJF Scheduling" << std::endl;
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),7);
     std::map<char, std::pair<int, int>> process_stats;
     auto compare = [](const process_info& lhs, const process_info& rhs) {
         return lhs.burst_time > rhs.burst_time;
@@ -69,11 +66,10 @@ void shortest_job_first(std::vector<process_info> processVector) {
     std::priority_queue<process_info, std::vector<process_info>, decltype(compare)> priorityQueue(compare);
     int current_time{0};
     while(true) {
-        for(auto it = processVector.begin(); it != processVector.end(); it++) {
+        for(auto it = processVector.begin(); it != processVector.end();) {
             if(it->arrival_time == current_time) {
                 priorityQueue.push(*it);
                 processVector.erase(it, it + 1);
-                it--;
             } else break;
         }
         if(process_executing) {
@@ -97,9 +93,7 @@ void shortest_job_first(std::vector<process_info> processVector) {
             auto total_turnaround_time = std::accumulate(process_stats.begin(), process_stats.end(), 0,
                                                          [](int s, const std::pair<char, std::pair<int, int>>& p) {return s + p.second.second;});
 
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),11);
             std::cout << std::left << std::setw(13) << "Process ID" << std::setw(18) << "Turnaround Time" << "Waiting Time" << std::endl;
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),7);
             for(const auto& elem : process_stats) {
                 std::cout << std::left << std::setw(13) << elem.first << std::setw(18) << elem.second.second << elem.second.first << std::endl;
             }
@@ -113,9 +107,7 @@ void shortest_job_first(std::vector<process_info> processVector) {
 
 
 void round_robin(std::vector<process_info> processVector, int quantum = 4) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),12);
     std::cout << "Round Robin Scheduling" << std::endl;
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),7);
     std::map<char, std::pair<int, int>> process_stats;
     process_info curr_process_info{};
     bool process_executing{false};
@@ -126,11 +118,10 @@ void round_robin(std::vector<process_info> processVector, int quantum = 4) {
                   return pi1.arrival_time < pi2.arrival_time;
               });
     while(true) {
-        for(auto it = processVector.begin(); it != processVector.end(); it++) {
+        for(auto it = processVector.begin(); it != processVector.end();) {
             if(it->arrival_time == current_time) {
                 processQueue.push_back(*it);
                 processVector.erase(it, it + 1);
-                it--;
             } else break;
         }
         if(process_executing) {
@@ -167,10 +158,8 @@ void round_robin(std::vector<process_info> processVector, int quantum = 4) {
                                                              return s + p.second.second;
                                                          });
 
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 12);
             std::cout << std::left << std::setw(13) << "Process ID" << std::setw(18) << "Turnaround Time"
                       << "Waiting Time" << std::endl;
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
             for (const auto &elem: process_stats) {
                 std::cout << std::left << std::setw(13) << elem.first << std::setw(18) << elem.second.second
                           << elem.second.first << std::endl;
@@ -185,9 +174,7 @@ void round_robin(std::vector<process_info> processVector, int quantum = 4) {
 }
 
 void shortest_remaining_time_first(std::vector<process_info> processVector) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),13);
     std::cout << "Shortest Remaining Time First"<< std::endl;
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),7);
     std::map<char, std::pair<int, int>> process_stats;
     process_info curr_process_info{};
     bool process_executing{false};
@@ -200,8 +187,8 @@ void shortest_remaining_time_first(std::vector<process_info> processVector) {
     int current_time{0};
     std::sort(processVector.begin(), processVector.end(),
               [](const process_info& pi1, const process_info& pi2) {
-        return pi1.arrival_time < pi2.arrival_time;
-    });
+                  return pi1.arrival_time < pi2.arrival_time;
+              });
     while(true) {
         for(auto it = processVector.begin(); it != processVector.end();) {
             if(it->arrival_time == current_time) {
@@ -238,23 +225,21 @@ void shortest_remaining_time_first(std::vector<process_info> processVector) {
             std::cout << current_time << "\tComplete\n" << std::endl;
             auto total_wait_time = std::accumulate(process_stats.begin(), process_stats.end(), 0,
                                                    [](int s, const std::pair<char, std::pair<int, int>> &p) {
-                return s + p.second.first;
-            });
+                                                       return s + p.second.first;
+                                                   });
             auto total_turnaround_time = std::accumulate(process_stats.begin(), process_stats.end(), 0,
                                                          [](int s, const std::pair<char, std::pair<int, int>> &p) {
-                return s + p.second.second;
-            });
+                                                             return s + p.second.second;
+                                                         });
 
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 13);
             std::cout << std::left << std::setw(13) << "Process ID" << std::setw(18) << "Turnaround Time"
-            << "Waiting Time" << std::endl;
-            SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+                      << "Waiting Time" << std::endl;
             for (const auto &elem: process_stats) {
                 std::cout << std::left << std::setw(13) << elem.first << std::setw(18) << elem.second.second
-                << elem.second.first << std::endl;
+                          << elem.second.first << std::endl;
             }
             std::cout << std::left << std::setw(13) << "Average" << std::setw(18)
-            << (float) total_turnaround_time / process_stats.size();
+                      << (float) total_turnaround_time / process_stats.size();
             std::cout << (float) total_wait_time / process_stats.size() << std::endl << std::endl;
             break;
         }
